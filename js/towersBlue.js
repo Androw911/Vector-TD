@@ -1,0 +1,408 @@
+function towerB1(x, y)
+{
+  this.name = 'Slowing Ray'
+  this.desc1 = 'Hits four targets and slows them,'
+  this.desc2 = 'upgrade increases slow duration '
+  this.desc3 = ''
+  this.x = x;
+  this.y = y;
+  this.size = 25;
+  this.tower = 1;
+  this.damage = 410;
+  this.cost = 300;
+  this.range = 70;
+  this.level = 1;
+  this.anim = 10;
+  this.selected = 0;
+  this.target = false;
+  this.target0 = false;
+  this.target1 = false;
+  this.target2 = false;
+  this.target3 = false;
+  this.rof = 66;
+  this.timer = this.rof;
+  this.lock = true;
+  this.id = document.getElementById('bluetwr1')
+  this.slow = 34;
+}
+
+towerB1.prototype = Object.create(tower.prototype);
+
+towerB1.prototype.projectile = function(enemy, centre)
+{
+   alpha = (this.rof - this.timer)/2.3;
+  if (this.timer == this.rof)
+    alpha = 1;
+  for(var i = 1; i<4; i++)
+  {
+    ctx.strokeStyle = 'rgba(0,111,214,' + 0.3333*i/alpha + ')';
+    ctx.lineWidth = 4-i;
+    ctx.beginPath();
+    ctx.moveTo(centre.x+centre.size/2, centre.y+centre.size/2);
+    ctx.lineTo(enemy.x+enemy.size/2, enemy.y+enemy.size/2);
+    ctx.stroke();
+  }
+}
+
+towerB1.prototype.targeting = function()
+{
+  for(i = 0; i < 4; i++)
+  {
+    if (i == 0)
+      this.target = this.target0;
+    if (i == 1)
+      this.target = this.target1;
+    if (i == 2)
+      this.target = this.target2;
+    if (i == 3)
+      this.target = this.target3;
+    var first = 1;
+    if(this.target && enemies[this.target]) //Ak má živý target tak zistí či je v range
+    {
+      var enemy = enemies[this.target];
+      if((enemy.x-enemy.size/2-this.x+this.size/2)*(enemy.x-enemy.size/2-this.x+this.size/2) +
+        (enemy.y-enemy.size/2-this.y+this.size/2)*(enemy.y-enemy.size/2-this.y+this.size/2) >= this.range*this.range)
+      {
+        this.target = false;
+         if (i == 0)
+           this.target0 = false;
+         if (i == 1)
+           this.target1 = false;
+         if (i == 2)
+           this.target2 = false;
+         if (i == 3)
+           this.target3 = false;
+      }
+    }
+    if(!this.target || !enemies[this.target]) //Ak nemá target
+    for(var j in enemies)
+    {
+      var enemy = enemies[j]; //prejde polom enemies a nájde takých čo sú v range
+      if(enemy && ((enemy.x-enemy.size/2-this.x+this.size/2)*(enemy.x-enemy.size/2-this.x+this.size/2) +
+      (enemy.y-enemy.size/2-this.y+this.size/2)*(enemy.y-enemy.size/2-this.y+this.size/2) <= this.range*this.range)
+         && j != this.target0 && j != this.target1 && j != this.target2)
+      {
+        if(first === 1) //Ak nemá target tak targetne prvého
+        {
+          first = 0;
+          this.target = j;
+        }
+        else
+        { //vyberie z nich nearest visible
+          var target = enemies[this.target];
+          if(enemy && (enemy.x-enemy.size/2-this.x+this.size/2)*(enemy.x-enemy.size/2-this.x+this.size/2) +
+            (enemy.y-enemy.size/2-this.y+this.size/2)*(enemy.y-enemy.size/2-this.y+this.size/2) <
+            (target.x-target.size/2-this.x+this.size/2)*(target.x-target.size/2-this.x+this.size/2) +
+            (target.y-target.size/2-this.y+this.size/2)*(target.y-target.size/2-this.y+this.size/2)
+            && j != this.target0 && j != this.target1 && j != this.target2)
+            this.target = j;
+        }
+      }
+    }
+    if (i == 0)
+      this.target0 = this.target;
+    if (i == 1)
+      this.target1 = this.target;
+    if (i == 2)
+      this.target2 = this.target;
+    if (i == 3)
+      this.target3 = this.target;
+  }
+
+}
+
+towerB1.prototype.fire = function ()
+{
+  this.targeting();
+  var tmp = 0;
+  if(!this.timer)
+    this.timer = this.rof;
+  for(var i = 0; i < 4; i++)
+  {
+    if (i == 0)
+      this.target = this.target0;
+    if (i == 1)
+      this.target = this.target1;
+    if (i == 2)
+      this.target = this.target2;
+    if (i == 3)
+      this.target = this.target3;
+
+    if(this.target && enemies[this.target])
+    {
+      if(this.timer == this.rof)
+      {
+        var enemy = enemies[this.target];
+        this.projectile(enemy, this);
+        enemy.hp -= this.damage;
+        if(enemy.slow%2)
+          enemy.slow = this.slow+1;
+        else
+          enemy.slow = this.slow;
+        if(enemies[this.target].hp <= 0)
+         {
+           enemies[this.target] = undefined;
+           if (i == 0)
+             this.target0 = false;
+           if (i == 1)
+             this.target1 = false;
+           if (i == 2)
+             this.target2 = false;
+           if (i == 3)
+             this.target3 = false;
+           player.money += 4 + player.wave;          
+          player.score += (player.wave+(player.money/500))*player.life
+           if(!tmp)
+            tmp++;
+         }
+      }
+    }
+
+    if(this.target && enemies[this.target] && this.timer <= this.anim)
+    {
+      this.projectile(enemies[this.target], this);
+      if (!this.lock && this.timer === this.rof-this.anim)
+        this.target = false;
+    }
+  }
+  if(tmp)
+  {
+    this.timer--;
+  }
+  for(var i = 0; i < 4; i++) //Toto monštrum je len na timer-- keď dá hit
+  {
+    if (i == 0)
+      this.target = this.target0;
+    if (i == 1)
+      this.target = this.target1;
+    if (i == 2)
+      this.target = this.target2;
+    if (i == 3)
+      this.target = this.target3;
+
+    if(this.target && this.timer === this.rof)
+     {
+      this.timer --;
+      break;
+     }
+  }//koniec monštra
+
+  if(this.timer != this.rof)
+    this.timer--;
+}
+
+function towerB2(x, y)
+{
+  this.name = 'Freezing Ray'
+  this.desc1 = 'Hits four targets and stuns them,'
+  this.desc2 = 'stuned enemies are then slowed,'
+  this.desc3 = 'upgrade increases stun duration '
+  this.x = x;
+  this.y = y;
+  this.size = 25;
+  this.tower = 1;
+  this.damage = 1000;  //////Upraviť asi
+  this.cost = 650;
+  this.range = 80;
+  this.level = 1;
+  this.anim = 10;
+  this.selected = 0;
+  this.target = false;
+  this.target0 = false;
+  this.target1 = false;
+  this.target2 = false;
+  this.target3 = false;
+  this.rof = 60;
+  this.timer = this.rof;
+  this.lock = true;
+  this.id = document.getElementById('bluetwr2')
+  this.slow = 34;
+  this.stun = 8;
+}
+
+towerB2.prototype = Object.create(towerB1.prototype);
+
+towerB1.prototype.fire = function ()
+{
+  this.targeting();
+  var tmp = 0;
+  if(!this.timer)
+    this.timer = this.rof;
+  for(var i = 0; i < 4; i++)
+  {
+    if (i == 0)
+      this.target = this.target0;
+    if (i == 1)
+      this.target = this.target1;
+    if (i == 2)
+      this.target = this.target2;
+    if (i == 3)
+      this.target = this.target3;
+
+    if(this.target && enemies[this.target])
+    {
+      if(this.timer == this.rof)
+      {
+        var enemy = enemies[this.target];
+        this.projectile(enemy, this);
+        enemy.hp -= this.damage;
+        enemy.stun = this.stun;
+        if(enemy.slow%2)
+          enemy.slow = this.slow+1;
+        else
+          enemy.slow = this.slow;
+        if(enemies[this.target].hp <= 0)
+         {
+           enemies[this.target] = undefined;
+           if (i == 0)
+             this.target0 = false;
+           if (i == 1)
+             this.target1 = false;
+           if (i == 2)
+             this.target2 = false;
+           if (i == 3)
+             this.target3 = false;
+           player.money += 4 + player.wave;          
+          player.score += (player.wave+(player.money/500))*player.life
+           if(!tmp)
+            tmp++;
+         }
+      }
+    }
+
+    if(this.target && enemies[this.target] && this.timer <= this.anim)
+    {
+      this.projectile(enemies[this.target], this);
+      if (!this.lock && this.timer === this.rof-this.anim)
+        this.target = false;
+    }
+  }
+  if(tmp)
+  {
+    this.timer--;
+  }
+  for(var i = 0; i < 4; i++) //Toto monštrum je len na timer-- keď dá hit
+  {
+    if (i == 0)
+      this.target = this.target0;
+    if (i == 1)
+      this.target = this.target1;
+    if (i == 2)
+      this.target = this.target2;
+    if (i == 3)
+      this.target = this.target3;
+
+    if(this.target && this.timer === this.rof)
+     {
+      this.timer --;
+      break;
+     }
+  }//koniec monštra
+
+  if(this.timer != this.rof)
+    this.timer--;
+}
+
+function towerB3(x, y)
+{
+  this.name = 'Confusing Ray'
+  this.desc1 = 'Target of this tower is confused'
+  this.desc2 = 'what makes him move backwards,'
+  this.desc3 = 'cannot hit same target twice'
+  this.x = x;
+  this.y = y;
+  this.size = 25;
+  this.tower = 1;
+  this.damage = 2000;
+  this.cost = 1100;
+  this.range = 100;
+  this.level = 1;
+  this.anim = 10;
+  this.selected = 0;
+  this.target = false;
+  this.target0 = false;
+  this.target1 = false;
+  this.target2 = false;
+  this.target3 = false;
+  this.rof = 80;
+  this.timer = this.rof;
+  this.lock = true;
+  this.id = document.getElementById('bluetwr3')
+}
+towerB3.prototype = Object.create(tower.prototype);
+
+towerB3.prototype.targeting = function()
+{
+  var first = 1;
+  if(this.target && enemies[this.target] && enemies[this.target].confused) //Ak má živý target tak zistí či bol confused
+  {
+    this.target = false;    
+  }
+  if(!this.target || !enemies[this.target]) //Ak nemá target
+  for(var i in enemies)
+  {
+    var enemy = enemies[i]; //prejde polom enemies a nájde takých čo sú v range
+    if(enemy && ((enemy.x-enemy.size/2-this.x+this.size/2)*(enemy.x-enemy.size/2-this.x+this.size/2) +
+    (enemy.y-enemy.size/2-this.y+this.size/2)*(enemy.y-enemy.size/2-this.y+this.size/2) <= this.range*this.range) && !enemy.confused)
+    {
+      if(first === 1) //Ak nemá target tak targetne prvého
+      {
+        first = 0;
+        this.target = i;
+      }
+      else
+      { //vyberie z nich nearest visible
+        var target = enemies[this.target];
+        if(enemy && !enemy.confused && (enemy.x-enemy.size/2-this.x+this.size/2)*(enemy.x-enemy.size/2-this.x+this.size/2) +
+          (enemy.y-enemy.size/2-this.y+this.size/2)*(enemy.y-enemy.size/2-this.y+this.size/2) <
+          (target.x-target.size/2-this.x+this.size/2)*(target.x-target.size/2-this.x+this.size/2) +
+          (target.y-target.size/2-this.y+this.size/2)*(target.y-target.size/2-this.y+this.size/2))
+            this.target = i;
+      }
+    }
+  }
+}
+
+towerB3.prototype.fire = function ()
+{
+  this.targeting();
+
+  if(!this.timer)
+    this.timer = this.rof;
+
+  if(this.target && enemies[this.target] && this.timer <= this.anim)
+  {
+    this.projectile(enemies[this.target], this);
+    this.timer--;
+    if (!this.lock && this.timer === this.rof-this.anim)
+      this.target = false;
+  }
+
+  if(this.target && enemies[this.target])
+  {
+    var enemy = enemies[this.target];
+    if(this.timer === this.rof)
+    {
+     this.projectile(enemy, this);
+     enemies[this.target].hp -= this.damage;
+     enemy.confusion = 61;
+     enemy.confused++;
+     if(enemy.i)
+      enemy.i--
+    else
+      enemy.i++
+     this.timer --;
+     if(enemies[this.target].hp <= 0)
+      {
+        enemies[this.target] = undefined;
+        this.target = false;
+        player.money += 4 + player.wave;          
+          player.score += (player.wave+(player.money/500))*player.life
+      }
+    }
+  }
+  if(this.timer > this.anim)
+    this.timer--;
+}
+
+towerB3.prototype.projectile = towerB1.prototype.projectile
